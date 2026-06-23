@@ -362,6 +362,19 @@ export const FIELDS = {
          {ticker:"GEV", name:"GE Vernova", exchange:"NYSE", role:"가스터빈·전력망 장비 — 에너지 전환 핵심 공급업체", note:"GE에서 분사(2024), 가스터빈 글로벌 과점, 풍력·그리드 솔루션", type:"share"},
          {ticker:"PWR", name:"Quanta Services", exchange:"NYSE", role:"전력망·통신 인프라 시공 — 미국 1위 전선 시공사", note:"전력망 현대화·재생에너지 연결 공사 수요 급증", type:"share"},
        ]},
+      {id:"koreanPower", name:"🇰🇷 한국 전력 & 인프라", emoji:"🇰🇷", isFieldBottleneck:false,
+       bottleneck:"원전 설계·기자재·정비 독점 + 미국 전력망 변압기 수출",
+       bottleneckDetail:"한국은 원전 설계(한전기술)·기자재(두산에너빌리티)·정비(한전KPS)를 독점 운영. HD현대일렉트릭·효성중공업은 미국 전력망 현대화 수혜로 변압기 수출이 급증 중. 미국 내 변압기 공급 부족으로 납기 2~3년 대기 수요 확보.",
+       stocks:[
+         {ticker:"267260", name:"HD현대일렉트릭", exchange:"KRX", role:"변압기 수출 급증 — 미국 전력망 투자 직접 수혜", note:"미국 수출 2배+, 초고압 변압기 납기 2~3년 대기", type:"bottleneck"},
+         {ticker:"034020", name:"두산에너빌리티", exchange:"KRX", role:"원전 핵심 기자재 제조 — 체코·국내 원전 수주", note:"체코 24GW 프로젝트 참여, SMR 기자재 수주 기대", type:"bottleneck"},
+         {ticker:"052690", name:"한전기술", exchange:"KRX", role:"원전 설계 엔지니어링 독점 — 체코 프로젝트 설계 참여", note:"한국 원전 설계 100% 독점, 체코 수출 설계 용역", type:"bottleneck"},
+         {ticker:"051600", name:"한전KPS", exchange:"KRX", role:"원전·화력 정비 독점 — 안정 배당 + 원전 확대 수혜", note:"전력 설비 정비 독점, 배당수익률 3~4%", type:"bottleneck"},
+         {ticker:"298040", name:"효성중공업", exchange:"KRX", role:"초고압 변압기·STATCOM 수출 — 미국·유럽 전력망 수혜", note:"GIS·STATCOM 글로벌 경쟁력, 미국·유럽 수출 급증", type:"share"},
+         {ticker:"010120", name:"LS ELECTRIC", exchange:"KRX", role:"배전·전력시스템·EV충전 인프라 — 국내 전력기기 1위", note:"EV충전 인프라 + 스마트그리드 이중 성장 드라이버", type:"share"},
+         {ticker:"000500", name:"가온전선", exchange:"KRX", role:"전력·해저케이블 — 전력망 확충·해상풍력 연결 수혜", note:"전력케이블 수요 급증, 해저케이블 수주 확대", type:"share"},
+         {ticker:"015760", name:"한국전력", exchange:"KRX", role:"국내 전력 독점 유틸리티 — 요금 정상화 + AI 전력 수요", note:"적자 개선 중, 전기요금 현실화 진행, AI DC 전력 수요 급증", type:"share"},
+       ]},
     ]
   },
   cyber:{

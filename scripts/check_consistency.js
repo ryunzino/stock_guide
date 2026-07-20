@@ -35,6 +35,46 @@ for (const m of pyRaw.matchAll(/"([A-Z0-9.]+)"\s*:/g)) {
   pyTickers.add(m[1]);
 }
 
+// ── 5. analysis.js 플레이스홀더 검사 ──────────────────────────
+const placeholderCount = (analysisRaw.match(/직접 확인 권장/g) || []).length;
+
+// ── 6. analysis.js verdictColor ↔ verdict 불일치 검사 ─────────
+const COLOR_SENTIMENT = {
+  "#00ff88": "buy",
+  "#00cc66": "buy",
+  "#4a9eff": "buy",
+  "#ffaa00": "neutral",
+  "#ffd700": "neutral",
+  "#a855f7": "speculative",
+  "#ff4444": "avoid",
+};
+// 긍정/부정 키워드
+const BUY_WORDS    = ["매수", "강력매수", "장기 매수"];
+const AVOID_WORDS  = ["주의", "위험", "손절", "하락"];
+
+const verdictColorMismatches = [];
+// 각 티커 블록 추출 (대략적 파싱)
+const tickerBlockRe = /["']([A-Z0-9.]+)["']\s*:\s*\{([^}]+(?:\{[^}]*\}[^}]*)*)\}/g;
+for (const m of analysisRaw.matchAll(tickerBlockRe)) {
+  const ticker = m[1];
+  const block  = m[2];
+  const colorM   = block.match(/verdictColor\s*:\s*["']([^"']+)["']/);
+  const verdictM = block.match(/verdict\s*:\s*["']([^"']+)["']/);
+  if (!colorM || !verdictM) continue;
+  const color   = colorM[1];
+  const verdict = verdictM[1];
+  const sentiment = COLOR_SENTIMENT[color];
+  if (!sentiment) continue;
+  const hasBuy   = BUY_WORDS.some(w => verdict.includes(w));
+  const hasAvoid = AVOID_WORDS.some(w => verdict.includes(w));
+  if (sentiment === "avoid" && hasBuy) {
+    verdictColorMismatches.push(`  ${ticker}: color=${color}(AVOID) but verdict="${verdict}" includes buy keyword`);
+  }
+  if (sentiment === "buy" && hasAvoid) {
+    verdictColorMismatches.push(`  ${ticker}: color=${color}(BUY) but verdict="${verdict}" includes avoid keyword`);
+  }
+}
+
 // ── 비교 ───────────────────────────────────────────────────────
 let ok = true;
 
@@ -55,8 +95,24 @@ check("symbols.js",      fieldTickers, symbolTickers);
 check("analysis.js",     fieldTickers, analysisTickers);
 check("fetch_stocks.py", fieldTickers, pyTickers);
 
+// ── 플레이스홀더 결과 출력 ─────────────────────────────────────
+if (placeholderCount > 0) {
+  console.warn(`\n⚠️  analysis.js 플레이스홀더 "직접 확인 권장" ${placeholderCount}건 — 실제 가격으로 교체 권장`);
+  ok = false;
+} else {
+  console.log(`✅ 플레이스홀더 없음 — 모든 current/target 필드 기재됨`);
+}
+
+// ── verdictColor 불일치 결과 출력 ─────────────────────────────
+if (verdictColorMismatches.length > 0) {
+  console.warn(`\n⚠️  verdictColor/verdict 불일치 ${verdictColorMismatches.length}건:`);
+  verdictColorMismatches.forEach(s => console.warn(s));
+} else {
+  console.log(`✅ verdictColor/verdict 불일치 없음`);
+}
+
 if (ok) {
-  console.log(`✅ 모든 데이터 소스 일치 (${fieldTickers.size}개 티커)\n`);
+  console.log(`\n✅ 모든 데이터 소스 일치 (${fieldTickers.size}개 티커)\n`);
 } else {
   console.log(`\n위 항목을 수정 후 재실행하세요.\n`);
   process.exit(1);

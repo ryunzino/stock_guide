@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { createChart, ColorType, LineStyle } from "lightweight-charts";
 import { TV_SYMBOL } from './data/symbols';
 import { TYPE, FIELDS } from './data/fields';
-import { ANALYSIS } from './data/analysis';
+// ANALYSIS is loaded lazily via dynamic import in InvestmentDashboard
 
 const now = new Date();
 const CURRENT_DATE = `${now.getFullYear()}.${String(now.getMonth()+1).padStart(2,'0')}`;
@@ -10,7 +10,7 @@ const TOTAL_ANALYZED = [...new Set(
   Object.values(FIELDS).flatMap(f => f.sectors.flatMap(s => s.stocks.map(st => st.ticker)))
 )].length;
 
-const VERDICT_GROUPS = (() => {
+function computeVerdictGroups(analysis) {
   const seen = new Set();
   const groups = [
     {color:"#00ff88",colors:["#00ff88","#00cc66"],bg:"#001a0a",border:"#004020",label:"매수",emoji:"🟢",stocks:[]},
@@ -23,7 +23,7 @@ const VERDICT_GROUPS = (() => {
       sector.stocks.forEach(stock => {
         if (seen.has(stock.ticker)) return;
         seen.add(stock.ticker);
-        const a = ANALYSIS[stock.ticker];
+        const a = analysis[stock.ticker];
         if (!a) return;
         const g = groups.find(g => g.colors.includes(a.verdictColor)) || groups[1];
         g.stocks.push({...stock, verdict:a.verdict, horizon:a.horizon, fieldLabel:field.label, fieldEmoji:field.emoji, verdictColor:a.verdictColor});
@@ -31,7 +31,7 @@ const VERDICT_GROUPS = (() => {
     });
   });
   return groups;
-})();
+}
 
 const COMPARE_COLORS = ["#4a9eff","#ff6b6b","#ffd700","#a855f7","#00ff88"];
 const RANGE_PRESETS = [["1M",1],["3M",3],["6M",6],["1Y",12],["3Y",36],["5Y",60],["전체",null]];
@@ -155,8 +155,8 @@ function NewsPanel({ ticker, name }) {
   );
 }
 
-function AnalysisPanel({ ticker }) {
-  const a = ANALYSIS[ticker];
+function AnalysisPanel({ ticker, analysis }) {
+  const a = (analysis || {})[ticker];
   if (!a) return (
     <div style={{padding:"20px",background:"#0e0e16",borderRadius:"8px",textAlign:"center"}}>
       <div style={{fontSize:"24px",marginBottom:"8px"}}>📋</div>
@@ -246,7 +246,7 @@ function AnalysisPanel({ ticker }) {
   );
 }
 
-function StockDetail({ stock, onClose }) {
+function StockDetail({ stock, onClose, analysis }) {
   const [tab, setTab] = useState("analysis");
   useEffect(() => { setTab("analysis"); }, [stock.ticker]);
   const t = TYPE[stock.type];
@@ -274,7 +274,7 @@ function StockDetail({ stock, onClose }) {
       <div style={{flex:1,overflowY:"auto",padding:"14px 18px"}}>
         {tab==="chart" && <TradingViewChart ticker={stock.ticker} />}
         {tab==="news" && <NewsPanel ticker={stock.ticker} name={stock.name} />}
-        {tab==="analysis" && <AnalysisPanel ticker={stock.ticker} />}
+        {tab==="analysis" && <AnalysisPanel ticker={stock.ticker} analysis={analysis} />}
       </div>
     </div>
   );
@@ -851,14 +851,14 @@ function CompareView() {
   );
 }
 
-function SummaryView({ onSelectStock, selectedStock }) {
+function SummaryView({ onSelectStock, selectedStock, verdictGroups }) {
   return (
     <div>
       <div style={{fontSize:"11px",color:"#444",marginBottom:"18px"}}>
         전체 <span style={{color:"#00ff88"}}>{TOTAL_ANALYZED}종목</span> 투자 평가별 분류 — 종목 클릭 시 상세 분석
       </div>
       <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(240px,1fr))",gap:"14px"}}>
-        {VERDICT_GROUPS.map(group=>{
+        {(verdictGroups || []).map(group=>{
           const isGreen = group.color === "#00ff88";
           const strongStocks  = isGreen ? group.stocks.filter(s=>s.verdictColor==="#00ff88"&&s.verdict.includes("강력")) : [];
           const longBuyStocks = isGreen ? group.stocks.filter(s=>s.verdictColor==="#00ff88"&&!s.verdict.includes("강력")) : [];
@@ -899,6 +899,14 @@ export default function InvestmentDashboard() {
   const [activeField, setActiveField] = useState("physicalAI");
   const [activeSectorId, setActiveSectorId] = useState("chip");
   const [selectedStock, setSelectedStock] = useState(null);
+  const [analysis, setAnalysis] = useState(null);
+  const [verdictGroups, setVerdictGroups] = useState([]);
+  useEffect(() => {
+    import('./data/analysis').then(m => {
+      setAnalysis(m.ANALYSIS);
+      setVerdictGroups(computeVerdictGroups(m.ANALYSIS));
+    });
+  }, []);
   const isSpecialView = activeField === "summary" || activeField === "compare";
   const field = isSpecialView ? null : FIELDS[activeField];
   const activeSector = isSpecialView ? null : (field.sectors.find(s=>s.id===activeSectorId)||field.sectors[0]);
@@ -925,7 +933,7 @@ export default function InvestmentDashboard() {
         .overlay{position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:99}
       `}</style>
       {selectedStock && <div className="overlay" onClick={()=>setSelectedStock(null)} />}
-      {selectedStock && <StockDetail stock={selectedStock} onClose={()=>setSelectedStock(null)} />}
+      {selectedStock && <StockDetail stock={selectedStock} onClose={()=>setSelectedStock(null)} analysis={analysis} />}
       <div style={{marginBottom:"20px"}}>
         <div style={{display:"flex",alignItems:"center",gap:"12px",marginBottom:"6px"}}>
           <span style={{fontSize:"11px",color:"#4a9eff",letterSpacing:"3px",textTransform:"uppercase"}}>Investment Analysis</span>
@@ -1021,7 +1029,7 @@ export default function InvestmentDashboard() {
           </div>
         </>
       )}
-      {activeField === "summary" && <SummaryView onSelectStock={setSelectedStock} selectedStock={selectedStock} />}
+      {activeField === "summary" && <SummaryView onSelectStock={setSelectedStock} selectedStock={selectedStock} verdictGroups={verdictGroups} />}
       {activeField === "compare" && <CompareView />}
       <div style={{marginTop:"28px",borderTop:"1px solid #111",paddingTop:"14px",fontSize:"9px",color:"#2a2a2a",lineHeight:"1.8"}}>
         ※ 본 자료는 투자 참고용이며 투자 권유가 아닙니다. 종목 선택 전 반드시 개별 리서치를 병행하세요.
